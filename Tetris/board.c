@@ -280,21 +280,17 @@ void clear_rows(game_t *game, int row_start, int row_end){
 
 void collapse_board(game_t *game){
     int row_full_start = ROW_NONE;
-    int row = 0;
 
-    while(row < BOARD_HEIGHT){
+    for(int row = 0; row < BOARD_HEIGHT; row++){
         for(int i = 0; i < BOARD_WIDTH; i++){
 
             // if any cell is empty, row is not complete
             if(game->board[i][row] == CELL_EMPTY){
-                //rintf("Cell empty: %i %i\n", i, row);
-                // if previous rows were full but this row is empty, call clear rows and set current row back
-                if(row_full_start != ROW_NONE){
-                    //printf("Clearing rows %i to %i\n", row_full_start, row);
-                    clear_rows(game, row_full_start, row);
 
-                    row = row_full_start;
-                    row_full_start = ROW_NONE;
+                // if previous rows were full but this row is empty, call clear rows and exit
+                if(row_full_start != ROW_NONE){
+                    clear_rows(game, row_full_start, row);
+                    return;
                 }
 
                 break;
@@ -306,7 +302,5 @@ void collapse_board(game_t *game){
                 row_full_start = row;
             }
         }
-
-        row++;
     }
 }
