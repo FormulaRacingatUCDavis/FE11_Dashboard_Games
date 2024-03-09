@@ -1,9 +1,9 @@
 #include "board.h"
 #include "Windows.h"
 #include "conio.h"
+#include "stdio.h"
 
 #define ROW_NONE -1
-
 
 bool pos_possible(piece_t *piece, game_t *game);
 bool integrate_piece(piece_t *piece, game_t *game);
@@ -11,9 +11,6 @@ bool move_piece(piece_t *piece, game_t *game, direction_t direction);
 void player_move(game_t *game, piece_t *piece);
 void _collapse_board(game_t *game, int first_row);
 void collapse_board(game_t *game);
-cell_t piece_cell(piece_t *piece, int x, int y);
-int piece_width(piece_t *piece);
-int piece_height(piece_t *piece);
 
 
 // cell_t get_cell(game_t *game, int x, int y){
@@ -22,32 +19,39 @@ int piece_height(piece_t *piece);
 
 // special functions to handle rotations
 cell_t piece_cell(piece_t *piece, int x, int y){
+    int x_raw = x;
+    int y_raw = y;
     switch (piece->rotation){
         case DIRECTION_UP:
-            return piece->piece[x][y];
+            // default
             break;
         case DIRECTION_DOWN:
-            return piece->piece[piece->width-x-1][piece->height-y-1];
+            x_raw = (piece->width_raw - 1) - x;
+            y_raw = (piece->height_raw - 1) - y;
             break;
         case DIRECTION_RIGHT:
-            return piece->piece[y][x];
+            x_raw = y;
+            y_raw = x;
             break;
         case DIRECTION_LEFT:
-            return piece->piece[piece->height-y-1][piece->width-x-1];
+            x_raw = (piece->width_raw - 1) - y;
+            y_raw = (piece->height_raw - 1) - x;       
             break;
     }
-    return CELL_EMPTY;
+    //printf("XY: %i %i\n", x, y);
+    //printf("raw XY: %i %i\n", x_raw, y_raw);
+    return piece->cell[x_raw][y_raw];
 }
 
 int piece_width(piece_t *piece){
     switch (piece->rotation){
         case DIRECTION_UP:
         case DIRECTION_DOWN:
-            return piece->width;
+            return piece->width_raw;
             break;
         case DIRECTION_RIGHT:
         case DIRECTION_LEFT:
-            return piece->height;
+            return piece->height_raw;
             break;
     }
     return 0;
@@ -57,11 +61,11 @@ int piece_height(piece_t *piece){
     switch (piece->rotation){
         case DIRECTION_UP:
         case DIRECTION_DOWN:
-            return piece->height;
+            return piece->height_raw;
             break;
         case DIRECTION_RIGHT:
         case DIRECTION_LEFT:
-            return piece->width;
+            return piece->width_raw;
             break;
     }
     return 0;
@@ -76,8 +80,8 @@ void init_board(game_t *game){
 }
 
 bool pos_possible(piece_t *piece, game_t *game){
-    for(int i = 0; i < piece->width; i++){
-        for(int j = 0; j < piece->height; j++){
+    for(int i = 0; i < piece_width(piece); i++){
+        for(int j = 0; j < piece_height(piece); j++){
             int board_x = piece->pos_x + i;
             int board_y = piece->pos_y + j;
 
@@ -90,7 +94,7 @@ bool pos_possible(piece_t *piece, game_t *game){
             }
 
             // check for cell collisions
-            if(game->board[board_x][board_y] != CELL_EMPTY && piece->piece[i][j] != CELL_EMPTY){
+            if(game->board[board_x][board_y] != CELL_EMPTY && piece_cell(piece, i, j) != CELL_EMPTY){
                 return false;
             }
         }
@@ -113,13 +117,13 @@ bool integrate_piece(piece_t *piece, game_t *game){
         return false;
     }
 
-    for(int i = 0; i < piece->width; i++){
-        for(int j = 0; j < piece->height; j++){
+    for(int i = 0; i < piece_width(piece); i++){
+        for(int j = 0; j < piece_height(piece); j++){
             int board_x = piece->pos_x + i;
             int board_y = piece->pos_y + j;
 
-            if(piece->piece[i][j] != CELL_EMPTY){
-                game->board[board_x][board_y] = piece->piece[i][j];
+            if(piece_cell(piece, i, j) != CELL_EMPTY){
+                game->board[board_x][board_y] = piece_cell(piece, i, j);
             }
         }
     }
@@ -155,6 +159,35 @@ bool move_piece(piece_t *piece, game_t *game, direction_t direction){
     return false;
 }
 
+bool rotate_piece(piece_t *piece, game_t *game, bool clockwise){
+    int original_rotation = piece->rotation;
+
+    // update piece rotation
+    if(clockwise){
+        piece->rotation++;
+    } else {
+        piece->rotation--;
+    }
+
+    // handle overflow
+    if(piece->rotation < 0) {
+        piece->rotation = 3;
+    } else if (piece->rotation > 3){
+        piece->rotation = 0;
+    }
+
+    // check if move is possible
+    if(pos_possible(piece, game)){
+        return true;
+    }
+
+    // move is blocked, cancel move
+    piece->rotation = original_rotation;
+
+    return false;
+}
+
+
 void player_move(game_t *game, piece_t *piece){
     if(!_kbhit()){
         return;
@@ -169,6 +202,9 @@ void player_move(game_t *game, piece_t *piece){
             break;
         case 's':
             move_piece(piece, game, DIRECTION_DOWN);
+            break;
+        case 'w':
+            rotate_piece(piece, game, true);
             break;
         default:
             // do nothing
@@ -197,18 +233,21 @@ result_t board_update(piece_t *active_piece, game_t *game){
 void new_piece(piece_t *piece){
     static piece_type_t last_piece_type = PIECE_NONE;
 
-    piece->pos_x = 2;
+    piece->pos_x = 5;
     piece->pos_y = 15;
     piece->frames_since_shift = 0;
-    piece->height = 4;
-    piece->width = 1;
-    piece->piece[0][0] = 1;
-    piece->piece[0][1] = 1;
-    piece->piece[0][2] = 1;
-    piece->piece[0][3] = 1;
+    piece->height_raw = 4;
+    piece->width_raw = 1;
+    piece->cell[0][0] = 1;
+    piece->cell[0][1] = 1;
+    piece->cell[0][2] = 1;
+    piece->cell[0][3] = 1;
+    piece->rotation = DIRECTION_LEFT;
 }
 
 void clear_rows(game_t *game, int row_start, int row_end){
+    //printf("Start: %i, End: %i\n", row_start, row_end);
+
     if(row_start < 0 || row_start >= BOARD_HEIGHT){
         return;
     }
@@ -221,6 +260,7 @@ void clear_rows(game_t *game, int row_start, int row_end){
 
     // TODO: animation to show row clears
 
+    // move down rows above clear
     for(int i = 0; i < (BOARD_HEIGHT - row_end); i++){
         int source_row = row_end + i;
         int dest_row = row_start + i;
@@ -229,6 +269,7 @@ void clear_rows(game_t *game, int row_start, int row_end){
         }
     }
 
+    // clear out top rows
     for(int i = 0; i < (row_end - row_start); i++){
         int row = (BOARD_HEIGHT - 1) - i;
         for(int j = 0; j < BOARD_WIDTH; j++){
@@ -238,30 +279,34 @@ void clear_rows(game_t *game, int row_start, int row_end){
 }
 
 void collapse_board(game_t *game){
-    _collapse_board(game, 0);
-}
+    int row_full_start = ROW_NONE;
+    int row = 0;
 
-void _collapse_board(game_t *game, int first_row){
-    int row_start = ROW_NONE;
-    int row_end = ROW_NONE;
-
-    for(int j = 0; j < BOARD_HEIGHT; j++){
+    while(row < BOARD_HEIGHT){
         for(int i = 0; i < BOARD_WIDTH; i++){
-            if(game->board[i][j] == CELL_EMPTY){
+
+            // if any cell is empty, row is not complete
+            if(game->board[i][row] == CELL_EMPTY){
+                //rintf("Cell empty: %i %i\n", i, row);
+                // if previous rows were full but this row is empty, call clear rows and set current row back
+                if(row_full_start != ROW_NONE){
+                    //printf("Clearing rows %i to %i\n", row_full_start, row);
+                    clear_rows(game, row_full_start, row);
+
+                    row = row_full_start;
+                    row_full_start = ROW_NONE;
+                }
+
                 break;
             }
 
-            if(i == (BOARD_WIDTH - 1)){ // entire row is clear
-                if(row_start == ROW_NONE){
-                    row_start = j;
-                } 
-                else if(row_end == ROW_NONE){
-                    row_end = j;
-                    clear_rows(game, row_start, row_end);
-                    _collapse_board(game, row_start);
-                    return;
-                }
+            // check if we've reached end of row without finding empty cell
+            // and record row number if this is the first full row
+            if((row_full_start == ROW_NONE) && (i + 1 == BOARD_WIDTH)) {
+                row_full_start = row;
             }
         }
+
+        row++;
     }
 }

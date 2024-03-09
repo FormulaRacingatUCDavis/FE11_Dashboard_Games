@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define BOARD_WIDTH 5
+#define BOARD_WIDTH 10
 #define BOARD_HEIGHT 20
 #define BOARD_EXTRA_ROWS 4
 #define BOARD_HEIGHT_ACTUAL (BOARD_HEIGHT + BOARD_EXTRA_ROWS)
@@ -20,7 +20,7 @@ typedef enum {
 typedef enum {
     DIRECTION_DOWN = 0,
     DIRECTION_LEFT = 1,
-    DIRECTION_UP= 2,
+    DIRECTION_UP = 2,
     DIRECTION_RIGHT = 3
 } direction_t;
 
@@ -49,17 +49,20 @@ typedef struct {
 typedef struct {
     int pos_x;
     int pos_y;
-    int width;
-    int height;
+    int width_raw;
+    int height_raw;
     int frames_since_shift;
     direction_t rotation;
     piece_type_t type;
-    cell_t piece[PIECE_MAX_XY][PIECE_MAX_XY];
+    cell_t cell[PIECE_MAX_XY][PIECE_MAX_XY];
 } piece_t;
 
 
 result_t board_update(piece_t *active_piece, game_t *game);
 void new_piece(piece_t *piece);
 void init_board(game_t *game);
+cell_t piece_cell(piece_t *piece, int x, int y);
+int piece_width(piece_t *piece);
+int piece_height(piece_t *piece);
 
 #endif
