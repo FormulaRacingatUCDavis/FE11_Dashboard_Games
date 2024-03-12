@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "d:/Users/leoja/Documents/GitHub/FE11_Dashboard_Games/Pacman",
-      "program": "d:/Users/leoja/Documents/GitHub/FE11_Dashboard_Games/Pacman/build/Debug/outDebug",
+      "cwd": "d:/Users/leoja/Documents/GitHub/FE11_Dashboard_Games/Tetris",
+      "program": "d:/Users/leoja/Documents/GitHub/FE11_Dashboard_Games/Tetris/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

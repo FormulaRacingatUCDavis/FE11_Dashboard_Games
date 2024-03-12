@@ -9,92 +9,43 @@ bool pos_possible(piece_t *piece, game_t *game);
 bool integrate_piece(piece_t *piece, game_t *game);
 bool move_piece(piece_t *piece, game_t *game, direction_t direction);
 void player_move(game_t *game, piece_t *piece);
-void _collapse_board(game_t *game, int first_row);
 void collapse_board(game_t *game);
+bool row_full(game_t *game, int row);
+bool row_empty(game_t *game, int row);
 
 
-// cell_t get_cell(game_t *game, int x, int y){
-//     return &game->board[x][y];
-// }
-
-// special functions to handle rotations
 cell_t piece_cell(piece_t *piece, int x, int y){
-    int x_raw = x;
-    int y_raw = y;
-    switch (piece->rotation){
-        case DIRECTION_UP:
-            // default
-            break;
-        case DIRECTION_DOWN:
-            x_raw = (piece->width_raw - 1) - x;
-            y_raw = (piece->height_raw - 1) - y;
-            break;
-        case DIRECTION_RIGHT:
-            x_raw = y;
-            y_raw = x;
-            break;
-        case DIRECTION_LEFT:
-            x_raw = (piece->width_raw - 1) - y;
-            y_raw = (piece->height_raw - 1) - x;       
-            break;
+    if(x < 0 || y < 0 || x >= piece->proto->size || y >= piece->proto->size){
+        CELL_EMPTY;
     }
-    //printf("XY: %i %i\n", x, y);
-    //printf("raw XY: %i %i\n", x_raw, y_raw);
-    return piece->cell[x_raw][y_raw];
+
+    return piece->proto->cell[piece->rotation][x][y];
 }
 
-int piece_width(piece_t *piece){
-    switch (piece->rotation){
-        case DIRECTION_UP:
-        case DIRECTION_DOWN:
-            return piece->width_raw;
-            break;
-        case DIRECTION_RIGHT:
-        case DIRECTION_LEFT:
-            return piece->height_raw;
-            break;
+cell_t board_cell(game_t *game, int x, int y){
+    if(x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT_ACTUAL){
+        return CELL_OUT_OF_BOUNDS;
     }
-    return 0;
-}
 
-int piece_height(piece_t *piece){
-    switch (piece->rotation){
-        case DIRECTION_UP:
-        case DIRECTION_DOWN:
-            return piece->height_raw;
-            break;
-        case DIRECTION_RIGHT:
-        case DIRECTION_LEFT:
-            return piece->width_raw;
-            break;
-    }
-    return 0;
+    return game->board[x][y];
 }
 
 void init_board(game_t *game){
     for(int i = 0; i < BOARD_WIDTH; i++){
         for(int j = 0; j < BOARD_HEIGHT_ACTUAL; j++){
-            game->board[i][j] = CELL_EMPTY;
+            game->board[i][j] = CELL_COLOR1;
         }
     }
 }
 
 bool pos_possible(piece_t *piece, game_t *game){
-    for(int i = 0; i < piece_width(piece); i++){
-        for(int j = 0; j < piece_height(piece); j++){
+    for(int i = 0; i < piece->proto->size; i++){
+        for(int j = 0; j < piece->proto->size; j++){
             int board_x = piece->pos_x + i;
             int board_y = piece->pos_y + j;
 
-            // check board boundaries
-            if(board_y < 0 || board_y >= BOARD_HEIGHT_ACTUAL) {
-                return false;
-            }
-            if(board_x < 0 || board_x >= BOARD_WIDTH) {
-                return false;
-            }
-
             // check for cell collisions
-            if(game->board[board_x][board_y] != CELL_EMPTY && piece_cell(piece, i, j) != CELL_EMPTY){
+            if(board_cell(game, board_x, board_y) != CELL_EMPTY && piece_cell(piece, i, j) != CELL_EMPTY){
                 return false;
             }
         }
@@ -117,8 +68,8 @@ bool integrate_piece(piece_t *piece, game_t *game){
         return false;
     }
 
-    for(int i = 0; i < piece_width(piece); i++){
-        for(int j = 0; j < piece_height(piece); j++){
+    for(int i = 0; i < piece->proto->size; i++){
+        for(int j = 0; j < piece->proto->size; j++){
             int board_x = piece->pos_x + i;
             int board_y = piece->pos_y + j;
 
@@ -171,8 +122,8 @@ bool rotate_piece(piece_t *piece, game_t *game, bool clockwise){
 
     // handle overflow
     if(piece->rotation < 0) {
-        piece->rotation = 3;
-    } else if (piece->rotation > 3){
+        piece->rotation = piece->proto->num_rotations - 1;
+    } else if (piece->rotation >= piece->proto->num_rotations){
         piece->rotation = 0;
     }
 
@@ -233,16 +184,20 @@ result_t board_update(piece_t *active_piece, game_t *game){
 void new_piece(piece_t *piece){
     static piece_type_t last_piece_type = PIECE_NONE;
 
-    piece->pos_x = 5;
-    piece->pos_y = 15;
+    piece_type_t piece_type = rand() % NUM_PIECES;
+
+    // reroll if same piece as last time
+    if(piece_type == last_piece_type){
+        piece_type = rand() % NUM_PIECES;
+    }
+
+    last_piece_type = piece_type;
+    piece->proto = get_piece_proto(piece_type);
+
+    piece->pos_x = piece->proto->spawn_pos_x;
+    piece->pos_y = piece->proto->spawn_pos_y;
     piece->frames_since_shift = 0;
-    piece->height_raw = 4;
-    piece->width_raw = 1;
-    piece->cell[0][0] = 1;
-    piece->cell[0][1] = 1;
-    piece->cell[0][2] = 1;
-    piece->cell[0][3] = 1;
-    piece->rotation = DIRECTION_LEFT;
+    piece->rotation = DIRECTION_DOWN;
 }
 
 void clear_rows(game_t *game, int row_start, int row_end){
@@ -280,27 +235,58 @@ void clear_rows(game_t *game, int row_start, int row_end){
 
 void collapse_board(game_t *game){
     int row_full_start = ROW_NONE;
+    int row = 0;
 
-    for(int row = 0; row < BOARD_HEIGHT; row++){
-        for(int i = 0; i < BOARD_WIDTH; i++){
+    while (row < BOARD_HEIGHT) {
 
-            // if any cell is empty, row is not complete
-            if(game->board[i][row] == CELL_EMPTY){
+        if(row_full(game, row)){
 
-                // if previous rows were full but this row is empty, call clear rows and exit
-                if(row_full_start != ROW_NONE){
-                    clear_rows(game, row_full_start, row);
-                    return;
-                }
-
-                break;
+            if(row_full_start == ROW_NONE){
+                row_full_start = row;  // record the start of full rows
             }
 
-            // check if we've reached end of row without finding empty cell
-            // and record row number if this is the first full row
-            if((row_full_start == ROW_NONE) && (i + 1 == BOARD_WIDTH)) {
-                row_full_start = row;
+        } else { // row is empty
+            // check if rows before were full, if so then clear out those rows and set back the row counter
+            if(row_full_start != ROW_NONE){ 
+                clear_rows(game, row_full_start, row);
+                
+                row = row_full_start; 
+                row_full_start = ROW_NONE;
             }
+
+        }
+
+        row++;
+    }
+}
+
+bool row_full(game_t *game, int row){
+    for(int i = 0; i < BOARD_WIDTH; i++){
+        // if any cell is empty, row is not full
+        if(game->board[i][row] == CELL_EMPTY){
+            return false;
         }
     }
+    return true;
+}
+
+bool row_empty(game_t *game, int row){
+    for(int i = 0; i < BOARD_WIDTH; i++){
+        // if any cell is empty, row is not full
+        if(game->board[i][row] != CELL_EMPTY){
+            return false;
+        }
+    }
+    return true;
+}
+
+bool topped_out(game_t *game){
+    // should only need to check the first row above board, but check all just in case
+    for(int row = BOARD_HEIGHT; row < BOARD_HEIGHT_ACTUAL; row++){
+        if(!row_empty(game, row)){
+            return true;
+        }
+    }
+
+    return false;
 }

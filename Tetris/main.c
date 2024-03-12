@@ -5,6 +5,8 @@
 
 void draw_board(game_t *game, piece_t *active_piece);
 
+piece_proto_t pieces[7];
+
 int main(void){
     cell_t board[BOARD_WIDTH][BOARD_HEIGHT + BOARD_EXTRA_ROWS];
     game_t game;
@@ -19,6 +21,10 @@ int main(void){
         board_update(&active_piece, &game);
         draw_board(&game, &active_piece);
         Sleep(100);
+        if(topped_out(&game)){
+            printf("YOU TOPPED OUT, BUM!");
+            return 0;
+        }
     }
 }
 
@@ -31,13 +37,15 @@ void draw_board(game_t *game, piece_t *active_piece){
 
             if(game->board[i][j] != CELL_EMPTY){
                 c = '#';
-            } else if(i >= active_piece->pos_x && i < active_piece->pos_x + piece_width(active_piece)
-                   && j >= active_piece->pos_y && j < active_piece->pos_y + piece_height(active_piece)) {
-                if(piece_cell(active_piece, i-active_piece->pos_x, j-active_piece->pos_y)){
+            } else if(i >= active_piece->pos_x && i < active_piece->pos_x + active_piece->proto->size
+                   && j >= active_piece->pos_y && j < active_piece->pos_y + active_piece->proto->size) {
+                    cell_t cell = piece_cell(active_piece, i-active_piece->pos_x, j-active_piece->pos_y);
+                    //printf("%i %i %i\n", i-active_piece->pos_x, j-active_piece->pos_y, cell);
+                if(cell){
                     c = '#';
                 }
             }
-            printf("%c", c);
+            printf("%c ", c);
         }
         printf("\n");
     }
