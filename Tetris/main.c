@@ -1,7 +1,7 @@
 #include "board.h"
 
 #include <stdio.h>
-#include <Windows.h>
+#include <Windows.h> 
 
 void draw_board(game_t *game, piece_t *active_piece);
 
@@ -14,7 +14,6 @@ int main(void){
     piece_t active_piece;
     new_piece(&active_piece);
     int score = 0;
-
     init_board(&game);
 
     while(1){
@@ -31,7 +30,10 @@ int main(void){
 void draw_board(game_t *game, piece_t *active_piece){
     printf("\033c");
 
+    printf("-----------------------\n");
+
     for(int j = (BOARD_HEIGHT-1); j >= 0; j--){
+        printf("| ");
         for(int i = 0; i < BOARD_WIDTH; i++){
             char c = ' ';
 
@@ -47,6 +49,8 @@ void draw_board(game_t *game, piece_t *active_piece){
             }
             printf("%c ", c);
         }
-        printf("\n");
+        printf("|\n");
     }
+
+    printf("-----------------------\n");
 }

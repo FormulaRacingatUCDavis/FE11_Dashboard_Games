@@ -33,7 +33,7 @@ cell_t board_cell(game_t *game, int x, int y){
 void init_board(game_t *game){
     for(int i = 0; i < BOARD_WIDTH; i++){
         for(int j = 0; j < BOARD_HEIGHT_ACTUAL; j++){
-            game->board[i][j] = CELL_COLOR1;
+            game->board[i][j] = CELL_EMPTY;
         }
     }
 }
@@ -64,9 +64,9 @@ bool pos_possible(piece_t *piece, game_t *game){
 
 bool integrate_piece(piece_t *piece, game_t *game){
     // confirm that piece position is valid
-    if(!pos_possible(piece, game)){
-        return false;
-    }
+    //if(!pos_possible(piece, game)){
+    //    return false;
+    //}
 
     for(int i = 0; i < piece->proto->size; i++){
         for(int j = 0; j < piece->proto->size; j++){

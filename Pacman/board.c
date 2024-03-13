@@ -5,17 +5,17 @@
 #define NUM_CELL_GEN_OPTIONS 2
 #define CELL_GEN_OPTIONS {CELL_SMALL_FOOD, CELL_BLOCKED}
 
-void generate_board(cell_t board[BOARD_WIDTH][BOARD_HEIGHT]) {
+void generate_board(cell_t board[BOARD_HEIGHT][BOARD_WIDTH]) {
   cell_t cell_options[NUM_CELL_GEN_OPTIONS] = CELL_GEN_OPTIONS;
 
   for (int i = 0; i < BOARD_WIDTH; i++) {
     for (int j = 0; j < BOARD_HEIGHT; j++) {
-      board[i][j] = cell_options[rand() % NUM_CELL_GEN_OPTIONS];
+      board[j][i] = cell_options[rand() % NUM_CELL_GEN_OPTIONS];
     }
   }
 }
 
-cell_t *get_cell_relative(cell_t board[BOARD_WIDTH][BOARD_HEIGHT], int x, int y, direction_t direction) {
+cell_t *get_cell_relative(cell_t board[BOARD_HEIGHT][BOARD_WIDTH], int x, int y, direction_t direction) {
   switch (direction) {
   case DIRECTION_UP:
     return get_cell(board, x, y - 1);
@@ -34,12 +34,12 @@ cell_t *get_cell_relative(cell_t board[BOARD_WIDTH][BOARD_HEIGHT], int x, int y,
   }
 }
 
-cell_t *get_cell(cell_t board[BOARD_WIDTH][BOARD_HEIGHT], int x, int y) {
+cell_t *get_cell(cell_t board[BOARD_HEIGHT][BOARD_WIDTH], int x, int y) {
   static cell_t board_edge = CELL_BOARD_EDGE;
   if (y < 0 || y >= BOARD_HEIGHT || x < 0 || x >= BOARD_WIDTH) {
     return &board_edge;
   }
-  return &board[x][y];
+  return &board[y][x];
 }
 
 //cell_t *get_cell_at_pos(cell_t board[BOARD_WIDTH][BOARD_HEIGHT], int pos_x, int pos_y) {
@@ -55,7 +55,7 @@ bool cell_open(cell_t * cell) {
   return true;
 }
 
-bool relative_cell_open(cell_t board[BOARD_WIDTH][BOARD_HEIGHT], int x, int y, direction_t direction) {
+bool relative_cell_open(cell_t board[BOARD_HEIGHT][BOARD_WIDTH], int x, int y, direction_t direction) {
   cell_t *cell = get_cell_relative(board, x, y, direction);
   return cell_open(cell);
 }

@@ -20,11 +20,11 @@ typedef struct {
 } being_t;
 
 void init_being(being_t *being, being_type type, int cell_x, int cell_y, direction_t direction, int speed);
-bool move_being(being_t * being, cell_t board[BOARD_WIDTH][BOARD_HEIGHT], direction_t direction);
-bool move_possible(being_t * being, cell_t board[BOARD_WIDTH][BOARD_HEIGHT], direction_t direction);
+bool move_being(being_t * being, cell_t board[BOARD_HEIGHT][BOARD_WIDTH], direction_t direction);
+bool move_possible(being_t * being, cell_t board[BOARD_HEIGHT][BOARD_WIDTH], direction_t direction);
 bool check_inputs(being_t *pacman);
-void move_pacman(being_t *pacman, cell_t board[BOARD_WIDTH][BOARD_HEIGHT]);
-void move_ghost(being_t *ghost, cell_t board[BOARD_WIDTH][BOARD_HEIGHT]);
+void move_pacman(being_t *pacman, cell_t board[BOARD_HEIGHT][BOARD_WIDTH]);
+void move_ghost(being_t *ghost, cell_t board[BOARD_HEIGHT][BOARD_WIDTH]);
 bool beings_coliding(being_t *being1, being_t *being2);
 
 #endif

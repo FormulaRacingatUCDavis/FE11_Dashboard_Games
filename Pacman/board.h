@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#define BOARD_WIDTH 20
-#define BOARD_HEIGHT 20
+#define BOARD_WIDTH 28
+#define BOARD_HEIGHT 31
 #define SUBPOSITIONS_PER_CELL 3
 #define SUBPOSITION_CENTER 0
 #define NUM_CELL_TYPES 4
