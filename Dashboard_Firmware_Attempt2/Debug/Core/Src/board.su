@@ -1,0 +1,17 @@
+../Core/Src/board.c:31:1:HAL_GPIO_EXTI_Callback	16	static
+../Core/Src/board.c:48:6:clear_input	4	static
+../Core/Src/board.c:56:8:piece_cell	24	static
+../Core/Src/board.c:64:8:board_cell	24	static
+../Core/Src/board.c:72:6:init_board	24	static
+../Core/Src/board.c:80:6:pos_possible	32	static
+../Core/Src/board.c:104:6:integrate_piece	32	static
+../Core/Src/board.c:124:6:move_piece	32	static
+../Core/Src/board.c:152:6:rotate_piece	32	static
+../Core/Src/board.c:181:6:player_move	16	static
+../Core/Src/board.c:197:10:board_update	16	static
+../Core/Src/board.c:216:6:new_piece	24	static
+../Core/Src/board.c:235:6:clear_rows	56	static
+../Core/Src/board.c:268:6:collapse_board	24	static
+../Core/Src/board.c:295:6:row_full	24	static
+../Core/Src/board.c:305:6:row_empty	24	static
+../Core/Src/board.c:315:6:topped_out	24	static

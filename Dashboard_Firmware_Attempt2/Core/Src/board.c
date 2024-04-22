@@ -1,16 +1,21 @@
 #include "board.h"
-#include "Windows.h"
-#include "conio.h"
+//#include "Windows.h"
+//#include "conio.h"
 #include "stdio.h"
-#include "ugui_SSD1963.h"
-
-#define CELL_SIZE 10
-#define CELL_PADDING 1
-#define BOARD_POS_X 10
-#define BOARD_POS_Y 10
-#define BACKGROUND_COLOR C_BLACK
+#include "stdbool.h"
+#include "stdint.h"
+#include "stm32f7xx_hal.h"
 
 #define ROW_NONE -1
+
+typedef struct{
+	bool left;
+	bool right;
+	bool rotate_left;
+	bool rotate_right;
+} USER_INPUT_t;
+
+USER_INPUT_t user_input;
 
 bool pos_possible(piece_t *piece, game_t *game);
 bool integrate_piece(piece_t *piece, game_t *game);
@@ -19,34 +24,34 @@ void player_move(game_t *game, piece_t *piece);
 void collapse_board(game_t *game);
 bool row_full(game_t *game, int row);
 bool row_empty(game_t *game, int row);
+void clear_input();
+void HAL_GPIO_EXTI_Callback(uint16_t pin);
 
-void fill_cell(int x, int y, UG_COLOR color){
-    UG_S16 x1 = BOARD_POS_X + (x * CELL_SIZE) + CELL_PADDING;
-    UG_S16 x2 = BOARD_POS_X + ((x + 1) * CELL_SIZE) - CELL_PADDING;
-    UG_S16 y1 = BOARD_POS_Y + (y * CELL_SIZE) + CELL_PADDING;
-    UG_S16 y2 = BOARD_POS_Y + ((y + 1) * CELL_SIZE) - CELL_PADDING;
 
-    UG_FillFrame(x1, y1, x2, y2, color);
+HAL_GPIO_EXTI_Callback(uint16_t pin){
+	switch(pin){
+		case GPIO_PIN_9:
+			user_input.rotate_left = true;
+			break;
+		case GPIO_PIN_10:
+			user_input.rotate_right = true;
+			break;
+		case GPIO_PIN_11:
+			user_input.left = true;
+			break;
+		case GPIO_PIN_12:
+			user_input.right = true;
+			break;
+	}
 }
 
-void draw_piece(piece_t *piece, UG_COLOR color){
-    for(int i = 0; i < PIECE_MAX_XY; i++){
-        for(int j = 0; j < PIECE_MAX_XY; j++){
-            if(piece_cell(piece, i, j) == CELL_EMPTY){
-                continue;
-            }
-
-            // cell filled
-            int board_x = i + piece->pos_x;
-            int board_y = j + piece->pos_y;
-            fill_cell(board_x, board_y, color);
-        }
-    }
+void clear_input(){
+	user_input.left = false;
+	user_input.right = false;
+	user_input.rotate_left = false;
+	user_input.rotate_left = false;
 }
 
-void clear_piece(piece_t *piece){
-    draw_piece(piece, BACKGROUND_COLOR);
-}
 
 cell_t piece_cell(piece_t *piece, int x, int y){
     if(x < 0 || y < 0 || x >= piece->proto->size || y >= piece->proto->size){
@@ -67,7 +72,7 @@ cell_t board_cell(game_t *game, int x, int y){
 void init_board(game_t *game){
     for(int i = 0; i < BOARD_WIDTH; i++){
         for(int j = 0; j < BOARD_HEIGHT_ACTUAL; j++){
-            game->board[i][j] = CELL_EMPTY;
+            game->board[i][j] = CELL_COLOR1;
         }
     }
 }
@@ -98,9 +103,9 @@ bool pos_possible(piece_t *piece, game_t *game){
 
 bool integrate_piece(piece_t *piece, game_t *game){
     // confirm that piece position is valid
-    //if(!pos_possible(piece, game)){
-    //    return false;
-    //}
+    if(!pos_possible(piece, game)){
+        return false;
+    }
 
     for(int i = 0; i < piece->proto->size; i++){
         for(int j = 0; j < piece->proto->size; j++){
@@ -120,9 +125,6 @@ bool move_piece(piece_t *piece, game_t *game, direction_t direction){
     int original_x = piece->pos_x;
     int original_y = piece->pos_y;
 
-    // erase piece from board
-    clear_piece(piece);
-
     switch(direction){
         case DIRECTION_DOWN:
             piece->pos_y--;
@@ -136,17 +138,15 @@ bool move_piece(piece_t *piece, game_t *game, direction_t direction){
     }
 
     // check if move is possible
-    bool move_success = pos_possible(piece, game);
-
-    if(!move_success){
-        // move is blocked, cancel move
-        piece->pos_x = original_x;
-        piece->pos_y = original_y;
+    if(pos_possible(piece, game)){
+        return true;
     }
 
-    // draw new piece
-    draw_piece(piece, C_BLUE);
-    return move_success;
+    // move is blocked, cancel move
+    piece->pos_x = original_x;
+    piece->pos_y = original_y;
+
+    return false;
 }
 
 bool rotate_piece(piece_t *piece, game_t *game, bool clockwise){
@@ -179,26 +179,19 @@ bool rotate_piece(piece_t *piece, game_t *game, bool clockwise){
 
 
 void player_move(game_t *game, piece_t *piece){
-    if(!_kbhit()){
-        return;
+    if(user_input.left){
+		move_piece(piece, game, DIRECTION_LEFT);
+    } else if(user_input.right){
+		move_piece(piece, game, DIRECTION_RIGHT);
     }
 
-    switch(_getch()){
-        case 'a':
-            move_piece(piece, game, DIRECTION_LEFT);
-            break;
-        case 'd':
-            move_piece(piece, game, DIRECTION_RIGHT);
-            break;
-        case 's':
-            move_piece(piece, game, DIRECTION_DOWN);
-            break;
-        case 'w':
-            rotate_piece(piece, game, true);
-            break;
-        default:
-            // do nothing
-    }   
+    if(user_input.rotate_left){
+    	rotate_piece(piece, game, false);
+    } else if(user_input.rotate_right){
+		rotate_piece(piece, game, true);
+    }
+
+    clear_input();
 }
 
 result_t board_update(piece_t *active_piece, game_t *game){
